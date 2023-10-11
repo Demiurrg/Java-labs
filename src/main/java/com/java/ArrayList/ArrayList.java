@@ -5,7 +5,7 @@ public class ArrayList<Type> implements List<Type> {
     private Object[] array;
     private int size = 0;
 
-    ArrayList() {
+    public ArrayList() {
         array = new Object[0];
     }
 
@@ -15,7 +15,7 @@ public class ArrayList<Type> implements List<Type> {
     }
 
     private void arrayLeftShift(int pos) {
-        for (int i = pos; i < size; i++)
+        for (int i = pos; i < size-1; i++)
             array[i] = array[i+1];
     }
 
@@ -35,7 +35,7 @@ public class ArrayList<Type> implements List<Type> {
 
     @Override
     public void add(Object value, int pos) throws IndexOutOfBoundsException {
-        if (pos < 0 || pos >= size))
+        if (pos < 0 || pos > size)
             throw new IndexOutOfBoundsException("Index is outside the bounds of the array");
         increaseSize();
         arrayRightShift(pos);
@@ -50,7 +50,7 @@ public class ArrayList<Type> implements List<Type> {
 
     @Override
     public void replace(Object value, int pos) throws IndexOutOfBoundsException {
-        if (pos < 0 || pos >= size)
+        if (pos < 0 || pos > size)
             throw new IndexOutOfBoundsException("Index is outside the bounds of the array");
         array[pos] = value;
     }
@@ -62,7 +62,7 @@ public class ArrayList<Type> implements List<Type> {
 
     @Override
     public void remove(int pos) throws IndexOutOfBoundsException {
-        if (pos < 0 || pos >= size)
+        if (pos < 0 || pos > size)
             throw new IndexOutOfBoundsException("Index is outside the bounds of the array");
         arrayLeftShift(pos);
         decreaseSize();
@@ -79,9 +79,14 @@ public class ArrayList<Type> implements List<Type> {
     @Override
     @SuppressWarnings("unchecked")
     public Type getValue(int pos) throws IndexOutOfBoundsException {
-        if (pos < 0 || pos >= size)
+        if (pos < 0 || pos > size)
             throw new IndexOutOfBoundsException("Index is outside the bounds of the array");
         return (Type) array[pos];
+    }
+
+    @Override
+    public int getSize() {
+        return size;
     }
 
     @Override

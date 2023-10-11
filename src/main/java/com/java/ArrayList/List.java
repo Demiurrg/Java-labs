@@ -57,6 +57,13 @@ public interface List<Type> {
     Type getValue(int pos) throws IndexOutOfBoundsException;
 
     /*
+     * Получение размера списка
+     *
+     * @return Возвращает размер списка
+     */
+    int getSize();
+
+    /*
     * Очистка списка - удаление всех элементов
     */
     void clear();

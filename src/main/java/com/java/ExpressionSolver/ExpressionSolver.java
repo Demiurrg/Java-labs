@@ -16,6 +16,13 @@ public class ExpressionSolver implements AbstractSolver {
         variables = new HashMap<String, Double>();
     }
 
+    private String doubleToString(double num) {
+        String result = Double.toString(num);
+        if (result.endsWith(".0"))
+            result = result.substring(0, result.length()-2);
+        return result;
+    }
+
     private double calculateOperation(double term1, double term2, char operation) {
         switch (operation) {
             case '+':
@@ -32,49 +39,56 @@ public class ExpressionSolver implements AbstractSolver {
         return 0;
     }
 
-    private void calculatePriority(int operation_index) {
-        StringBuilder builder = new StringBuilder(expression);
+    private String calculatePriority(String curr_expression, int operation_index) {
+        StringBuilder builder = new StringBuilder(curr_expression);
         double result;
         String term1 = "", term2 = "";
         int i = operation_index - 1, start = 0, end = 0;
-        while(i >= 0 && numbers.indexOf(expression.charAt(i)) != -1) {
-            term1 = expression.charAt(i) + term1;
+        while(i >= 0 && numbers.indexOf(curr_expression.charAt(i)) != -1) {
+            term1 = curr_expression.charAt(i) + term1;
             start = i;
             i--;
         }
         i = operation_index + 1;
-        while(i < expression.length() && numbers.indexOf(expression.charAt(i)) != -1) {
-            term2 += expression.charAt(i);
+        while(i < curr_expression.length() && numbers.indexOf(curr_expression.charAt(i)) != -1 || i == operation_index + 1 && curr_expression.charAt(i) == '-') {
+            term2 += curr_expression.charAt(i);
             i++;
             end = i;
         }
-        result = calculateOperation(Double.parseDouble(term1), Double.parseDouble(term2), expression.charAt(operation_index));
-        builder.replace(start, end, Double.toString(result));
-        expression = builder.toString();
+        result = calculateOperation(Double.parseDouble(term1), Double.parseDouble(term2), curr_expression.charAt(operation_index));
+        builder.replace(start, end, doubleToString(result));
+        return builder.toString();
     }
 
-    private double calculatePart(int start_index, int end_index) {
-        while (expression.indexOf('*') != -1)
-            calculatePriority(expression.indexOf('*'));
-        while (expression.indexOf('/') != -1)
-            calculatePriority(expression.indexOf('/'));
-        while (expression.indexOf('^') != -1)
-            calculatePriority(expression.indexOf('^'));
+    private void calculatePart(int start_index, int end_index, boolean brackets) {
+        String curr_part = expression.substring(brackets ? start_index+1 : start_index, end_index);
+        StringBuilder builder = new StringBuilder(expression);
+        while (curr_part.indexOf('^') != -1)
+            curr_part = calculatePriority(curr_part, curr_part.indexOf('^'));
+        while (curr_part.indexOf('*') != -1)
+            curr_part = calculatePriority(curr_part, curr_part.indexOf('*'));
+        while (curr_part.indexOf('/') != -1)
+            curr_part = calculatePriority(curr_part, curr_part.indexOf('/'));
         double result = 0;
         String curr_term = "";
         char curr_operation = '+';
-        end_index = expression.length();
-        for (int i = start_index; i < end_index; i++) {
-            if (numbers.indexOf(expression.charAt(i)) != -1) {
-                curr_term += expression.charAt(i);
+        for (int i = 0; i < curr_part.length(); i++) {
+            if (numbers.indexOf(curr_part.charAt(i)) != -1) {
+                curr_term += curr_part.charAt(i);
             }
-            else if (operations.indexOf(expression.charAt(i)) != -1) {
+            else if (operations.indexOf(curr_part.charAt(i)) != -1) {
                 result = calculateOperation(result, Double.parseDouble(curr_term), curr_operation);
                 curr_term = "";
-                curr_operation = expression.charAt(i);
+                curr_operation = curr_part.charAt(i);
             }
         }
-        return calculateOperation(result, Double.parseDouble(curr_term), curr_operation);
+        result = calculateOperation(result, Double.parseDouble(curr_term), curr_operation);
+        builder.replace(start_index, end_index+1, doubleToString(result));
+        expression = builder.toString();
+    }
+
+    private int correspondingLeftBracket(int right_bracket_index) {
+        return expression.substring(0, right_bracket_index).lastIndexOf('(', right_bracket_index);
     }
 
     @Override
@@ -86,7 +100,13 @@ public class ExpressionSolver implements AbstractSolver {
          Scanner scanner = new Scanner(System.in);
          expression = scanner.nextLine();
          expression = expression.replaceAll("\\s", "");
-         System.out.println(calculatePart(0, expression.length()));
+         int right_bracket_index = expression.indexOf(')');
+         while(right_bracket_index != -1) {
+             calculatePart(correspondingLeftBracket(right_bracket_index), right_bracket_index, true);
+             right_bracket_index = expression.indexOf(')', right_bracket_index);
+         }
+        calculatePart(0, expression.length(), false);
+         System.out.println(expression);
     }
 
 }

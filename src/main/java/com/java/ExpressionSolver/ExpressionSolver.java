@@ -1,5 +1,6 @@
 package com.java.ExpressionSolver;
 
+import java.io.LineNumberReader;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -10,6 +11,8 @@ public class ExpressionSolver implements AbstractSolver {
     private final String numbers = "0123456789.";
     private final String alphabet = "abcdefghijklmnopqrstuvwxyz";
     private final String operations = "+-*/^";
+
+    private final String[] functions = {"sin", "cos", "tan", "cotan", "abs"};
     Map<String, Double> variables;
 
     public ExpressionSolver() {
@@ -39,6 +42,37 @@ public class ExpressionSolver implements AbstractSolver {
         return 0;
     }
 
+    private int searchForFunction(String curr_part) {
+        int min_index = curr_part.length(), curr_index;
+        for (int i = 0; i < functions.length; i++) {
+            curr_index = curr_part.indexOf(functions[i]);
+            if (curr_index != -1 && curr_index < min_index)
+                min_index = curr_index;
+        }
+        if (min_index == curr_part.length())
+            return -1;
+        else
+            return min_index;
+    }
+
+    private String calculateFunction(String curr_part, int func_index) {
+        StringBuilder builder = new StringBuilder(curr_part);
+        int left_bracket_index = curr_part.indexOf('(', func_index);
+        String func_name = curr_part.substring(func_index, left_bracket_index);
+        int right_bracket_index = correspondingRightBracket(curr_part, left_bracket_index);
+        double input_value = calculatePart(left_bracket_index, right_bracket_index, true);
+        double result = switch (func_name) {
+            case "sin" -> Math.sin(input_value);
+            case "cos" -> Math.cos(input_value);
+            case "tan" -> Math.tan(input_value);
+            case "cotan" -> 1.0 / Math.tan(input_value);
+            case "abs" -> Math.abs(input_value);
+            default -> 0;
+        };
+        builder.replace(func_index, right_bracket_index+1, doubleToString(result));
+        return builder.toString();
+    }
+
     private String calculatePriority(String curr_expression, int operation_index) {
         StringBuilder builder = new StringBuilder(curr_expression);
         double result;
@@ -60,18 +94,26 @@ public class ExpressionSolver implements AbstractSolver {
         return builder.toString();
     }
 
-    private void calculatePart(int start_index, int end_index, boolean brackets) {
+    private double calculatePart(int start_index, int end_index, boolean brackets) {
         String curr_part = expression.substring(brackets ? start_index+1 : start_index, end_index);
         StringBuilder builder = new StringBuilder(expression);
+        double result = 0;
+        String curr_term = "";
+        char curr_operation = '+';
+
+        int func_index = searchForFunction(curr_part);
+        while (func_index != -1) {
+            curr_part = calculateFunction(curr_part, func_index);
+            func_index = searchForFunction(curr_part);
+        }
+
         while (curr_part.indexOf('^') != -1)
             curr_part = calculatePriority(curr_part, curr_part.indexOf('^'));
         while (curr_part.indexOf('*') != -1)
             curr_part = calculatePriority(curr_part, curr_part.indexOf('*'));
         while (curr_part.indexOf('/') != -1)
             curr_part = calculatePriority(curr_part, curr_part.indexOf('/'));
-        double result = 0;
-        String curr_term = "";
-        char curr_operation = '+';
+
         for (int i = 0; i < curr_part.length(); i++) {
             if (numbers.indexOf(curr_part.charAt(i)) != -1) {
                 curr_term += curr_part.charAt(i);
@@ -82,27 +124,62 @@ public class ExpressionSolver implements AbstractSolver {
                 curr_operation = curr_part.charAt(i);
             }
         }
+
         result = calculateOperation(result, Double.parseDouble(curr_term), curr_operation);
         builder.replace(start_index, end_index+1, doubleToString(result));
         expression = builder.toString();
+        return result;
     }
 
     private int correspondingLeftBracket(int right_bracket_index) {
         return expression.substring(0, right_bracket_index).lastIndexOf('(', right_bracket_index);
     }
 
+    private int correspondingRightBracket(String curr_part, int left_bracket_index) {
+        int brackets_balance = 1, curr_index = left_bracket_index, next_left_bracket, next_right_bracket;
+        while (curr_index < curr_part.length()) {
+            next_left_bracket = curr_part.indexOf('(', curr_index + 1);
+            next_right_bracket = curr_part.indexOf(')', curr_index + 1);
+            curr_index = Math.min(next_left_bracket != -1 ? next_left_bracket : curr_part.length(), next_right_bracket != -1 ? next_right_bracket : curr_part.length());
+            if (curr_part.charAt(curr_index) == '(')
+                brackets_balance++;
+            else
+                brackets_balance--;
+            if (brackets_balance == 0)
+                return curr_index;
+        }
+        return -1;
+    }
+
+    private int locateFunction(int right_bracket_index) {
+        int left_bracket_index = correspondingLeftBracket(right_bracket_index)-1;
+        while (left_bracket_index >= 0 && alphabet.indexOf(expression.charAt(left_bracket_index)) != -1)
+            left_bracket_index--;
+        if (expression.charAt(left_bracket_index+1) == '(')
+            return -1;
+        else
+            return left_bracket_index + 1;
+    }
+
     @Override
     public void solveExpression() {
          System.out.println("Доступные специальные символы: ( ) + - * / ^ !");
          //System.out.println("Переменные должны состоять из латинских букв");
-         //System.out.println("Доступные функции: sin, cos, tan, cotan, abs");
+         System.out.println("Доступные функции: sin, cos, tan, cotan, abs");
          System.out.println("Введите выражение:");
          Scanner scanner = new Scanner(System.in);
          expression = scanner.nextLine();
          expression = expression.replaceAll("\\s", "");
-         int right_bracket_index = expression.indexOf(')');
+
+         //defineAllVariables();
+
+         int right_bracket_index = expression.indexOf(')'), function_index;
          while(right_bracket_index != -1) {
-             calculatePart(correspondingLeftBracket(right_bracket_index), right_bracket_index, true);
+             function_index = locateFunction(right_bracket_index);
+             if (function_index != -1)
+                 expression = calculateFunction(expression, function_index);
+             else
+                calculatePart(correspondingLeftBracket(right_bracket_index), right_bracket_index, true);
              right_bracket_index = expression.indexOf(')', right_bracket_index);
          }
         calculatePart(0, expression.length(), false);

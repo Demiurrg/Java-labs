@@ -2,8 +2,8 @@ package com.java.ExpressionSolver;
 
 public interface AbstractSolver {
     /**
-     * Решение выражения. Ввод и вывод в консоль осуществляются внути метода.
+     * Решение выражения. Ввод и вывод в консоль осуществляются внутри метода.
      */
-    public void solveExpression();
+    void solveExpression();
 
 }

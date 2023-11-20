@@ -1,8 +1,6 @@
 package com.java.ExpressionSolver;
 
-import java.io.LineNumberReader;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class ExpressionSolver implements AbstractSolver {
@@ -10,14 +8,9 @@ public class ExpressionSolver implements AbstractSolver {
     private String expression;
     private final String numbers = "0123456789.";
     private final String alphabet = "abcdefghijklmnopqrstuvwxyz";
-    private final String operations = "+-*/^";
-
     private final String[] functions = {"sin", "cos", "tan", "cotan", "abs"};
-    Map<String, Double> variables;
 
-    public ExpressionSolver() {
-        variables = new HashMap<String, Double>();
-    }
+    public ExpressionSolver() {}
 
     private String doubleToString(double num) {
         String result = Double.toString(num);
@@ -27,25 +20,20 @@ public class ExpressionSolver implements AbstractSolver {
     }
 
     private double calculateOperation(double term1, double term2, char operation) {
-        switch (operation) {
-            case '+':
-                return term1 + term2;
-            case '-':
-                return term1 - term2;
-            case '*':
-                return term1 * term2;
-            case '/':
-                return term1 / term2;
-            case '^':
-                return Math.pow(term1, term2);
-        }
-        return 0;
+        return switch (operation) {
+            case '+' -> term1 + term2;
+            case '-' -> term1 - term2;
+            case '*' -> term1 * term2;
+            case '/' -> term1 / term2;
+            case '^' -> Math.pow(term1, term2);
+            default -> 0;
+        };
     }
 
     private int searchForFunction(String curr_part) {
         int min_index = curr_part.length(), curr_index;
-        for (int i = 0; i < functions.length; i++) {
-            curr_index = curr_part.indexOf(functions[i]);
+        for (String function : functions) {
+            curr_index = curr_part.indexOf(function);
             if (curr_index != -1 && curr_index < min_index)
                 min_index = curr_index;
         }
@@ -97,9 +85,15 @@ public class ExpressionSolver implements AbstractSolver {
     private double calculatePart(int start_index, int end_index, boolean brackets) {
         String curr_part = expression.substring(brackets ? start_index+1 : start_index, end_index);
         StringBuilder builder = new StringBuilder(expression);
+        String operations = "+-*/^";
         double result = 0;
         String curr_term = "";
-        char curr_operation = '+';
+        char curr_operation;
+
+        if (curr_part.charAt(0) == '-')
+            curr_operation = '-';
+        else
+            curr_operation = '+';
 
         int func_index = searchForFunction(curr_part);
         while (func_index != -1) {
@@ -114,7 +108,8 @@ public class ExpressionSolver implements AbstractSolver {
         while (curr_part.indexOf('/') != -1)
             curr_part = calculatePriority(curr_part, curr_part.indexOf('/'));
 
-        for (int i = 0; i < curr_part.length(); i++) {
+        for (int i = curr_part.charAt(0) == '+' ? 0 : 1; i < curr_part.length(); i++) {
+
             if (numbers.indexOf(curr_part.charAt(i)) != -1) {
                 curr_term += curr_part.charAt(i);
             }
@@ -161,18 +156,41 @@ public class ExpressionSolver implements AbstractSolver {
             return left_bracket_index + 1;
     }
 
+    private String searchForVariable() {
+        String var = "";
+        for (int i = 0; i < expression.length(); i++)
+            if (alphabet.indexOf(expression.charAt(i)) != -1)
+                var += expression.charAt(i);
+            else if (!var.equals("") && !Arrays.asList(functions).contains(var))
+                return var;
+            else
+                var = "";
+        return var;
+    }
+
+    private void defineAllVariables() {
+        Scanner scanner = new Scanner(System.in);
+        String var = searchForVariable();
+        double value;
+        while (!var.equals("")) {
+            System.out.println("Введите значение переменной " + var + ": ");
+            value = scanner.nextDouble();
+            expression = expression.replaceAll(var, Double.toString(value));
+            var = searchForVariable();
+        }
+    }
+
     @Override
     public void solveExpression() {
          System.out.println("Доступные специальные символы: ( ) + - * / ^ !");
-         //System.out.println("Переменные должны состоять из латинских букв");
+         System.out.println("Переменные должны состоять из латинских букв");
          System.out.println("Доступные функции: sin, cos, tan, cotan, abs");
          System.out.println("Введите выражение:");
          Scanner scanner = new Scanner(System.in);
          expression = scanner.nextLine();
          expression = expression.replaceAll("\\s", "");
 
-         //defineAllVariables();
-
+         defineAllVariables();
          int right_bracket_index = expression.indexOf(')'), function_index;
          while(right_bracket_index != -1) {
              function_index = locateFunction(right_bracket_index);
@@ -182,7 +200,7 @@ public class ExpressionSolver implements AbstractSolver {
                 calculatePart(correspondingLeftBracket(right_bracket_index), right_bracket_index, true);
              right_bracket_index = expression.indexOf(')', right_bracket_index);
          }
-        calculatePart(0, expression.length(), false);
+         calculatePart(0, expression.length(), false);
          System.out.println(expression);
     }
 

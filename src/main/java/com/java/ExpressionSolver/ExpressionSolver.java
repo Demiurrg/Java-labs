@@ -8,12 +8,18 @@ public class ExpressionSolver implements AbstractSolver {
     private final String operations = "+-*/^";
     private final String alphabet = "abcdefghijklmnopqrstuvwxyz";
     private final String[] functions = {"sin", "cos", "tan", "cotan", "abs"};
-    public double result = 0;
+    private boolean isCorrect = false;
+    private double result = 0;
+    private final Scanner scanner;
 
-    public ExpressionSolver() {}
+    public ExpressionSolver() {
+        scanner = new Scanner(System.in);
+    }
 
     public ExpressionSolver(ExpressionSolver obj) {
         expression = obj.expression;
+        scanner = obj.scanner;
+        isCorrect = obj.isCorrect;
         result = obj.result;
     }
 
@@ -83,7 +89,12 @@ public class ExpressionSolver implements AbstractSolver {
             end = i;
         }
         result = calculateOperation(Double.parseDouble(term1), Double.parseDouble(term2), curr_expression.charAt(operation_index));
-        builder.replace(start, end, doubleToString(result));
+        if (result < 0 && curr_expression.charAt(start-1) == '+')
+            builder.replace(start-1, end, '-' + doubleToString(-result));
+        else if (result < 0 && curr_expression.charAt(start-1) == '-')
+            builder.replace(start-1, end, '+' + doubleToString(-result));
+        else
+            builder.replace(start, end, doubleToString(result));
         return builder.toString();
     }
 
@@ -170,32 +181,31 @@ public class ExpressionSolver implements AbstractSolver {
         return var;
     }
 
+    private void defineVariable(String var, double value) {
+        StringBuilder builder = new StringBuilder(expression);
+        int curr_index = expression.indexOf(var);
+        while (curr_index != -1) {
+            if ((curr_index > 0 && alphabet.indexOf(expression.charAt(curr_index - 1)) == -1 || curr_index == 0)
+                    && (curr_index + var.length() < expression.length()
+                    && alphabet.indexOf(expression.charAt(curr_index + var.length())) == -1)
+                    || curr_index + var.length() == expression.length()) {
+                builder.replace(curr_index, curr_index + var.length(), doubleToString(value));
+                expression = builder.toString();
+            }
+            curr_index = expression.indexOf(var, curr_index + 1);
+        }
+    }
+
     private void defineAllVariables() {
-        Scanner scanner = new Scanner(System.in);
         String var = searchForVariable(expression);
         double value;
         while (!var.equals("")) {
             System.out.println("Введите значение переменной " + var + ": ");
-            value = scanner.nextDouble();
-            expression = expression.replaceAll(var, doubleToString(value));
+            String temp = scanner.nextLine();
+            value = Double.parseDouble(temp);
+            defineVariable(var, value);
             var = searchForVariable(expression);
         }
-    }
-
-    private void calculateFull() {
-        defineAllVariables();
-        int right_bracket_index = expression.indexOf(')'), function_index;
-        while(right_bracket_index != -1) {
-            function_index = locateFunction(right_bracket_index);
-            if (function_index != -1)
-                expression = calculateFunction(expression, function_index);
-            else
-                calculatePart(correspondingLeftBracket(right_bracket_index), right_bracket_index, true);
-            right_bracket_index = expression.indexOf(')');
-        }
-        calculatePart(0, expression.length(), false);
-        System.out.println(expression);
-        result = Double.parseDouble(expression);
     }
 
     private boolean correctSymbolsNearBracket(int bracket_index) {
@@ -221,24 +231,24 @@ public class ExpressionSolver implements AbstractSolver {
         while (curr_index != -1) {
             if (curr_index > 0
                     && operations.indexOf(expression.charAt(curr_index - 1)) == -1
+                    && alphabet.indexOf(expression.charAt(curr_index - 1)) == -1
                     && expression.charAt(curr_index - 1) != '('
                 || curr_index+var.length() < expression.length()
                     && operations.indexOf(expression.charAt(curr_index + var.length())) == -1
+                    && alphabet.indexOf(expression.charAt(curr_index + var.length())) == -1
                     && expression.charAt(curr_index + var.length()) != ')')
                 return false;
             curr_index = expression.indexOf(var, curr_index+1);
         }
+        defineVariable(var, 0);
         return true;
     }
 
     private boolean correctVariables() {
-        String curr_part = expression;
-        String var = searchForVariable(curr_part);
+        String var = searchForVariable(expression);
         while (!var.equals("")) {
-            if (correctVariable(var)) {
-                curr_part = curr_part.replaceAll(var, "0");
-                var = searchForVariable(curr_part);
-            }
+            if (correctVariable(var))
+                var = searchForVariable(expression);
             else
                 return false;
         }
@@ -273,30 +283,32 @@ public class ExpressionSolver implements AbstractSolver {
     }
 
     private boolean correct() {
+        String temp = expression;
         boolean correct = correctBrackets();
         if (!correct)
             return false;
         correct = correctVariables();
         if (!correct)
             return false;
+        expression = temp;
         try {
             ExpressionSolver solver = new ExpressionSolver(this);
-            solver.calculateFull();
+            result = solver.solveExpression();
         }
         catch (Exception e) {
-            result = 0;
             return false;
         }
+        isCorrect = true;
         return true;
     }
 
     @Override
-    public void solveExpression() {
+    public void inputExpression() {
         System.out.println("Доступные специальные символы: ( ) + - * / ^ !");
         System.out.println("Переменные должны состоять из латинских букв");
         System.out.println("Доступные функции: sin, cos, tan, cotan, abs");
         System.out.println("Введите выражение:");
-        Scanner scanner = new Scanner(System.in);
+
         expression = scanner.nextLine();
         expression = expression.replaceAll("\\s", "");
 
@@ -309,7 +321,21 @@ public class ExpressionSolver implements AbstractSolver {
     }
 
     @Override
-    public double getResult() {
+    public double solveExpression() {
+        if (isCorrect)
+            return result;
+        defineAllVariables();
+        int right_bracket_index = expression.indexOf(')'), function_index;
+        while(right_bracket_index != -1) {
+            function_index = locateFunction(right_bracket_index);
+            if (function_index != -1)
+                expression = calculateFunction(expression, function_index);
+            else
+                calculatePart(correspondingLeftBracket(right_bracket_index), right_bracket_index, true);
+            right_bracket_index = expression.indexOf(')');
+        }
+        calculatePart(0, expression.length(), false);
+        this.result = Double.parseDouble(expression);
         return result;
     }
 }

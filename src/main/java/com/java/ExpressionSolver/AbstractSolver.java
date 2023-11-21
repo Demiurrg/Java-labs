@@ -6,4 +6,10 @@ public interface AbstractSolver {
      */
     void solveExpression();
 
+    /**
+     * Геттер результата после вычисления выражения (по умолчанию или в случае ошибки равен 0).
+     *
+     * @return результат вычисленного выражения
+     */
+    double getResult();
 }

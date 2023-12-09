@@ -1,5 +1,7 @@
 package com.java.Reader;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class Person implements AbstractPerson {
@@ -81,6 +83,6 @@ public class Person implements AbstractPerson {
 
     @Override
     public void print() {
-        System.out.println(id + "   " + name + "   " + gender + "   " + date.toString() + "   " + division.getName() + "   " + salary);
+        System.out.println(id + "   " + name + "   " + gender + "   " + (new SimpleDateFormat("dd.MM.yyyy")).format(date) + "   " + division.getName() + "   " + salary);
     }
 }
